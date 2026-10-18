@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운명원 댓글 에이전트</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <h1>운명원 댓글 에이전트</h1>
+  <div class="meta">
+    <span id="today" class="pill">오늘 0/10 게시</span>
+    <span class="pill fence">허용 채널 5개</span>
+  </div>
+</header>
+
+<main class="cols">
+  <section class="col" id="col1">
+    <div class="col-head"><span class="step">①</span><h2>영상 불러오기</h2></div>
+    <button id="loadBtn" class="primary">영상 불러오기</button>
+    <form id="linkForm" class="link">
+      <input id="linkInput" placeholder="유튜브 링크 직접 입력" autocomplete="off">
+      <button type="submit">추가</button>
+    </form>
+    <p id="loadMsg" class="msg"></p>
+    <ul id="videoList" class="videos"></ul>
+  </section>
+
+  <section class="col wide locked" id="col2">
+    <div class="col-head"><span class="step">②</span><h2>영상 선택</h2></div>
+    <div id="empty2" class="empty">왼쪽 목록에서 영상을 고르세요.</div>
+    <div id="detail" hidden>
+      <div class="vhead">
+        <img id="dThumb" alt="">
+        <div><b id="dTitle"></b><div id="dChannel" class="sub"></div>
+          <a id="dLink" target="_blank" rel="noopener">유튜브에서 보기 ↗</a></div>
+      </div>
+      <div id="analyzing" class="msg" hidden></div>
+      <div id="analysis" hidden>
+        <div class="block">
+          <div class="label">영상 속 고민 <span id="srcBadge" class="badge"></span></div>
+          <p id="worry" class="worry"></p>
+        </div>
+        <details class="block">
+          <summary><span class="label">페르소나 · 삶의 여정</span> <span id="pLabel" class="sub"></span> <span id="confBadge" class="badge"></span></summary>
+          <div id="journey" class="journey"></div>
+          <div class="label" style="margin-top:12px">근거가 된 진짜 시청자 댓글</div>
+          <ul id="evidence" class="evidence"></ul>
+          <div class="label" style="margin-top:12px">걸러낸 의심 댓글</div>
+          <ul id="filtered" class="evidence muted"></ul>
+        </details>
+        <div class="block">
+          <div class="label">댓글 초안 <span class="sub">짚은 장면: <span id="scene"></span></span></div>
+          <textarea id="draft" rows="4"></textarea>
+          <div id="checks" class="checks"></div>
+          <div class="row">
+            <button id="reBtn">댓글만 다시 쓰기</button>
+            <button id="reAllBtn" class="ghost">처음부터 다시 분석</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="col locked" id="col3">
+    <div class="col-head"><span class="step">③</span><h2>댓글 달기</h2></div>
+    <label class="field">프로필
+      <select id="profile"></select>
+    </label>
+    <button id="postBtn" class="primary" disabled>댓글 달기</button>
+    <p id="postMsg" class="msg"></p>
+    <ol id="progress" class="progress">
+      <li data-s="opening">프로필 여는 중</li>
+      <li data-s="typing">입력 중</li>
+      <li data-s="posted">게시 완료</li>
+      <li data-s="view"><a id="viewLink" target="_blank" rel="noopener">댓글 보기 ↗</a></li>
+    </ol>
+    <div id="fail" class="fail" hidden></div>
+    <div id="unverified" class="warn" hidden>
+      <b>확인 필요</b>
+      <span id="uvMsg"></span>
+      <a id="uvShot" target="_blank" hidden><img alt="게시 직후 화면"></a>
+      <a id="uvLink" target="_blank" rel="noopener">영상에서 확인하기 ↗</a>
+      <div class="row">
+        <button data-resolve="1">올라갔어요</button>
+        <button data-resolve="0">안 올라갔어요</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<section class="log">
+  <h2>기록</h2>
+  <div class="tablebox"><table>
+    <thead><tr><th>시간</th><th>영상</th><th>프로필</th><th>댓글</th><th>결과</th></tr></thead>
+    <tbody id="logBody"></tbody>
+  </table></div>
+</section>
+<script src="/static/app.js"></script>
+</body>
+</html>

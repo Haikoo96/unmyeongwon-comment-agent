@@ -1,0 +1,24 @@
+# 내 컴퓨터의 크롬 프로필 이름 (data/profiles/<이름> 폴더로 만들어져요)
+profiles: [유튜브1, 유튜브2, 유튜브3]
+
+# 불러오기 · 게시 허용 범위
+channels:
+  - { id: UCxlc0Ky0aWoD8uI09ad44Tg, name: 외롭여 }
+  - { id: UC-ee_ziASM251TMXe3P3VZA, name: 리즈시절 LizTV }
+  - { id: UC09L3JxGVcn7SKLa-pjTEmw, name: 러브커넥트 유지연 }
+  - { id: UCVdtDW-HF4KluixGaBAcI4w, name: 연애데이터 노노 }
+  - { id: UCkGl2jieOVhGiHPdXF77Yyw, name: 심리조각 }
+
+# 본인 테스트 영상 (울타리 안으로 취급). 영상 ID를 넣으세요.
+test_videos: []
+
+# 게시용 크롬 창 위치·크기 (지우면 기본 크기로 열려요). 1920 화면에서 대시보드 ③ 칸이 오른쪽에 보이게 맞춘 값이에요.
+poster_window: { x: 0, y: 0, width: 1360, height: 1040 }
+
+videos_per_channel: 4
+comment: { min_chars: 40, max_chars: 120, brand: 운명원 }
+limits: { daily_max_comments: 10 }
+
+# 에이전트는 claude -p (Claude Code 헤드리스)로 돌아요. 내 Claude 로그인을 써요.
+llm:
+  model: claude-opus-5-5

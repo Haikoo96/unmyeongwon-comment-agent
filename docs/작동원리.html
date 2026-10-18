@@ -1,0 +1,568 @@
+<title>운명원 에이전트 작동 원리</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=STIX+Two+Text:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: one 16:9 stage like a 3Blue1Brown frame, the narration line under it, transport + chapter list below. Single dark look on purpose. */
+:root{
+  --bg:#0b0d12; --panel:#12151c; --line:#262b37; --grid:#16303b;
+  --ink:#f1efe8; --dim:#8a8f9c;
+  --blue:#58c4dd; --yellow:#f4d35e; --green:#83c167; --red:#fc6255;
+  --serif:"STIX Two Text","Noto Serif KR","Batang",serif;
+  --sans:"Noto Serif KR","Malgun Gothic",serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 var(--sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:36px 56px}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;flex-direction:column;gap:6px;margin-bottom:22px}
+.eyebrow{margin:0;font:600 13px/1 var(--serif);letter-spacing:.14em;color:var(--blue);text-transform:uppercase}
+h1{margin:0;font:600 clamp(28px,4vw,40px)/1.25 var(--sans);text-wrap:balance}
+.lede{margin:0;color:var(--dim);max-width:62ch}
+.stage{position:relative;margin:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg)}
+#stage{display:block;width:100%;height:auto;aspect-ratio:16/9}
+#cap{min-height:3.4em;padding:14px 18px;border-top:1px solid var(--line);background:var(--panel);font-size:17px;line-height:1.6;transition:opacity .35s}
+.transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+button{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+button:hover{border-color:var(--blue)}
+button:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+#play{min-width:96px;border-color:var(--blue);color:var(--blue)}
+.bar{flex:1 1 200px;height:4px;background:var(--line);border-radius:2px;overflow:hidden;min-width:120px}
+.bar i{display:block;height:100%;width:0;background:var(--blue)}
+.chapters{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.chapters button{font-size:13px;padding:5px 11px;color:var(--dim)}
+.chapters button[aria-current="step"]{color:var(--bg);background:var(--yellow);border-color:var(--yellow)}
+.chapters b{font:600 12px var(--serif);margin-right:6px}
+footer{margin-top:26px;color:var(--dim);font-size:14px;display:flex;flex-direction:column;gap:4px}
+footer a{color:var(--blue)}
+/* 녹화용 (#record): 무대만 화면 가득 */
+body.record{padding:0;overflow:hidden}
+body.record header,body.record .transport,body.record .chapters,body.record footer{display:none}
+body.record .wrap{max-width:none}
+body.record .stage{border:0;border-radius:0;width:100vw;height:100vh;display:flex;flex-direction:column}
+body.record #stage{width:auto;height:calc(100vh - 104px);margin:0 auto}
+body.record #cap{height:104px;min-height:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 8%;border-top:0;background:var(--bg);font-size:21px}
+@media (prefers-reduced-motion:reduce){#cap{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">운명원 댓글 에이전트</p>
+    <h1>댓글 한 줄이 만들어지기까지</h1>
+    <p class="lede">연애 영상을 고르면 에이전트 세 개가 페르소나와 삶의 여정을 그려 댓글을 쓰고, 사람이 확인하면 정해진 코드가 크롬으로 게시합니다. 그 과정을 장면 10개로 보여드려요.</p>
+  </header>
+
+  <figure class="stage">
+    <svg id="stage" viewBox="0 0 1600 900" role="img" aria-label="작동 원리 애니메이션">
+      <defs>
+        <marker id="ah-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ink)"/></marker>
+        <marker id="ah-dim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--dim)"/></marker>
+        <marker id="ah-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--blue)"/></marker>
+        <marker id="ah-yellow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--yellow)"/></marker>
+        <marker id="ah-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--green)"/></marker>
+        <marker id="ah-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--red)"/></marker>
+      </defs>
+    </svg>
+    <figcaption id="cap" aria-live="polite">운명원 댓글 에이전트가 댓글 한 줄을 만드는 과정을 순서대로 보여드릴게요.</figcaption>
+  </figure>
+
+  <div class="transport">
+    <button id="restart" type="button">처음부터</button>
+    <button id="prev" type="button">← 이전</button>
+    <button id="play" type="button">일시정지</button>
+    <button id="next" type="button">다음 →</button>
+    <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+  </div>
+  <ol class="chapters" id="chapters"></ol>
+
+  <footer>
+    <span>코드: <a href="https://github.com/Haikoo96/unmyeongwon-comment-agent">github.com/Haikoo96/unmyeongwon-comment-agent</a></span>
+    <span>실제 작동 시연 영상: <a href="https://drive.google.com/file/d/1b5H47lLIbHKtvykas9yclWuI3Fp-PCWa/view">구글 드라이브</a></span>
+    <span>왜 이렇게 설계했는지: <a href="https://claude.ai/artifact/Pbcmg4T1UqKUVVAqR3QkTx">제작 의도</a></span>
+    <span>키보드: ← → 장면 이동, 스페이스 재생/일시정지</span>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+(() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.getElementById("stage");
+  const css = getComputedStyle(document.documentElement);
+  const C = {};
+  ["ink", "dim", "blue", "yellow", "green", "red", "grid", "panel", "line", "bg"].forEach(k => C[k] = css.getPropertyValue("--" + k).trim());
+  const RECORD = location.hash === "#record";
+  const REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches && !RECORD;
+  if (RECORD) document.body.classList.add("record");
+
+  let layer = null;
+
+  // ---------- 그리기 도구 ----------
+  function E(tag, a = {}, p = layer) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in a) e.setAttribute(k, a[k]);
+    p.appendChild(e);
+    return e;
+  }
+  function G(p = layer) { return E("g", {}, p); }
+  function T(x, y, s, o = {}, p = layer) {
+    const e = E("text", { x, y, "text-anchor": o.anchor || "middle", "dominant-baseline": "central",
+      "font-size": o.size || 30, "font-weight": o.weight || 400, fill: o.color || C.ink }, p);
+    e.style.fontFamily = "var(--serif)";
+    e.textContent = s;
+    return e;
+  }
+  function TS(t, s, color) {
+    const sp = document.createElementNS(NS, "tspan");
+    sp.setAttribute("fill", color);
+    sp.textContent = s;
+    t.appendChild(sp);
+    return sp;
+  }
+  function R(x, y, w, h, o = {}, p = layer) {
+    return E("rect", { x: x - w / 2, y: y - h / 2, width: w, height: h, rx: o.rx ?? 14,
+      fill: o.fill || "none", "fill-opacity": o.fo ?? 1, stroke: o.stroke || C.ink, "stroke-width": o.sw || 2.5 }, p);
+  }
+  function Ci(x, y, r, o = {}, p = layer) {
+    return E("circle", { cx: x, cy: y, r, fill: o.fill || "none", "fill-opacity": o.fo ?? 1,
+      stroke: o.stroke || "none", "stroke-width": o.sw || 2.5 }, p);
+  }
+  function L(x1, y1, x2, y2, o = {}, p = layer) {
+    return E("line", { x1, y1, x2, y2, stroke: o.color || C.ink, "stroke-width": o.sw || 2.5, "stroke-linecap": "round" }, p);
+  }
+  function P(d, o = {}, p = layer) {
+    return E("path", { d, fill: o.fill || "none", stroke: o.color || C.ink, "stroke-width": o.sw || 2.5,
+      "stroke-linecap": "round", "stroke-linejoin": "round" }, p);
+  }
+  // 3b1b의 Write: 글자 외곽선을 그린 뒤 채워요
+  function write(e, tl, at, dur = 1.2) {
+    const col = e.getAttribute("fill");
+    gsap.set(e, { attr: { stroke: col, "stroke-width": 1.1, "stroke-dasharray": 900, "stroke-dashoffset": 900, "fill-opacity": 0 } });
+    tl.to(e, { attr: { "stroke-dashoffset": 0 }, duration: dur * .75, ease: "power1.inOut" }, at);
+    tl.to(e, { attr: { "fill-opacity": 1, "stroke-width": 0 }, duration: dur * .5, ease: "power1.out" }, at + dur * .5);
+  }
+  // 3b1b의 Create: 선을 처음부터 끝까지 그어요
+  function draw(e, tl, at, dur = 1, ease = "power2.inOut") {
+    const len = e.getTotalLength();
+    gsap.set(e, { attr: { "stroke-dasharray": `${len} ${len}`, "stroke-dashoffset": len } });
+    tl.to(e, { attr: { "stroke-dashoffset": 0 }, duration: dur, ease }, at);
+  }
+  function arrow(x1, y1, x2, y2, col, tl, at, dur = .6, sw = 3) {
+    const e = L(x1, y1, x2, y2, { color: C[col], sw });
+    draw(e, tl, at, dur);
+    tl.set(e, { attr: { "marker-end": `url(#ah-${col})` } }, at + dur);
+    return e;
+  }
+  function curveArrow(d, col, tl, at, dur = .7, sw = 3) {
+    const e = P(d, { color: C[col], sw });
+    draw(e, tl, at, dur);
+    tl.set(e, { attr: { "marker-end": `url(#ah-${col})` } }, at + dur);
+    return e;
+  }
+  function fade(e, tl, at, dur = .6, from = {}) {
+    tl.fromTo(e, { opacity: 0, ...from }, { opacity: 1, x: 0, y: 0, scale: 1, duration: dur, ease: "power2.out" }, at);
+  }
+  function along(dot, path, tl, at, dur, ease = "power1.inOut", from = 0, to = 1) {
+    const len = path.getTotalLength(), o = { t: from };
+    tl.to(o, { t: to, duration: dur, ease, onUpdate() {
+      const pt = path.getPointAtLength(o.t * len);
+      dot.setAttribute("cx", pt.x); dot.setAttribute("cy", pt.y);
+    } }, at);
+  }
+  function hold(tl, s) { tl.to({}, { duration: s }); }
+  // 점들을 부드러운 곡선으로 (Catmull-Rom)
+  function smooth(pts) {
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+      const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+      d += ` C ${c1[0]} ${c1[1]} ${c2[0]} ${c2[1]} ${p2[0]} ${p2[1]}`;
+    }
+    return d;
+  }
+  function star(cx, cy, r) {
+    let d = "";
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r;
+      d += (i ? " L " : "M ") + (cx + rr * Math.cos(a)).toFixed(1) + " " + (cy + rr * Math.sin(a)).toFixed(1);
+    }
+    return d + " Z";
+  }
+
+  // ---------- 장면 ----------
+  const COMMENT = [
+    [["스토리 조회 목록 끝까지 내리다가 이 영상 들어옴.. ", "blue"], ["새벽 2시에 보고 싶다 하고 일주일 잠수하는 거", "green"]],
+    [["재회 결심 아니라는 말에 걍 멍해짐. ", "green"], ["이번 주말엔 운명원 궁합이나 볼까.. ", "yellow"], ["다시 와도 또 똑같을지..", "blue"]],
+  ];
+
+  const scenes = [
+    { name: "시작", cap: "운명원 댓글 에이전트가 댓글 한 줄을 만드는 과정을 순서대로 보여드릴게요.",
+      build(tl) {
+        const t = T(800, 380, "댓글 한 줄이 만들어지기까지", { size: 78, weight: 600 });
+        write(t, tl, 0, 2.2);
+        draw(L(520, 452, 1080, 452, { color: C.blue, sw: 3 }), tl, 1.4, 1);
+        fade(T(800, 515, "운명원 댓글 에이전트는 이렇게 일해요", { size: 34, color: C.dim }), tl, 1.9, .8, { y: 12 });
+        hold(tl, 1.6);
+      } },
+
+    { name: "두 청중", cap: "댓글을 쓰는 쪽은 시청자를 연기하는 에이전트이고, 움직여야 할 쪽은 그 댓글을 읽는 다른 시청자예요.",
+      build(tl) {
+        const ag = Ci(290, 450, 80, { stroke: C.blue, sw: 3, fill: C.blue, fo: 0 });
+        draw(ag, tl, 0, .9);
+        tl.to(ag, { attr: { "fill-opacity": .12 }, duration: .5 }, .6);
+        fade(T(290, 450, "에이전트", { size: 30 }), tl, .7);
+        fade(T(290, 580, "시청자를 연기", { size: 26, color: C.dim }), tl, .9);
+        fade(T(290, 310, "쓰는 쪽", { size: 28, color: C.blue }), tl, 1);
+
+        const bub = G();
+        R(705, 450, 440, 104, { rx: 22, stroke: C.ink, fill: C.panel }, bub);
+        T(705, 450, "…이번 주말엔 운명원 궁합이나 볼까..", { size: 23 }, bub);
+        tl.fromTo(bub, { opacity: 0, x: -430, scale: .3, transformOrigin: "50% 50%" },
+          { opacity: 1, x: 0, scale: 1, duration: 1, ease: "back.out(1.4)" }, 1.3);
+
+        const rays = G();
+        const readers = [];
+        [340, 450, 560].forEach(y => [1180, 1290, 1400, 1510].forEach(x => readers.push(Ci(x, y, 24, { fill: C.dim }))));
+        readers.forEach((r, i) => fade(r, tl, 1.2 + i * .04, .4, { scale: .2, transformOrigin: "50% 50%" }));
+        fade(T(1345, 250, "읽는 쪽 = 진짜 타깃", { size: 28, color: C.yellow }), tl, 1.6);
+        readers.forEach((r, i) => {
+          const l = L(925, 450, +r.getAttribute("cx") - 30, +r.getAttribute("cy"), { color: C.yellow, sw: 1.6 }, rays);
+          l.setAttribute("stroke-opacity", .45);
+          draw(l, tl, 2.6 + i * .08, .5);
+          tl.to(r, { attr: { fill: C.yellow }, duration: .35 }, 2.95 + i * .08);
+        });
+        write(T(1345, 665, "운명원이 궁금해진다", { size: 30, color: C.yellow, weight: 600 }), tl, 4.1, 1.2);
+        hold(tl, 2.2);
+      } },
+
+    { name: "파이프라인", cap: "순서가 늘 같아서 오케스트레이션은 코드로 고정했어요. 판단이 필요한 세 칸만 claude -p 에이전트가 맡고, 게시는 정해진 코드가 해요.",
+      build(tl) {
+        const xs = [140, 360, 580, 800, 1020, 1240, 1460], y = 450;
+        const nodes = [["영상", "자막 · 댓글", "dim"], ["Agent 1", "페르소나", "blue"], ["Agent 2", "삶의 여정", "blue"],
+          ["Agent 3", "댓글 초안", "blue"], ["사람", "확인 · 수정", "yellow"], ["Playwright", "한 글자씩 게시", "green"], ["YouTube", "목록에서 확인", "red"]];
+        [["AI 판단 · claude -p", "blue", 450], ["사람 승인", "yellow", 820], ["정해진 코드", "green", 1150]].forEach(([s, c, x], i) => {
+          const g = G();
+          Ci(x - 16, 150, 9, { fill: C[c] }, g);
+          T(x, 150, s, { size: 24, color: C.dim, anchor: "start" }, g);
+          fade(g, tl, .1 + i * .15);
+        });
+        const groups = nodes.map(([t, sub, c], i) => {
+          const g = G();
+          R(xs[i], y, 172, 104, { stroke: C[c], fill: C[c], fo: .08, rx: 16 }, g);
+          T(xs[i], y, t, { size: t.length > 6 ? 24 : 27, weight: 600 }, g);
+          T(xs[i], y + 92, sub, { size: 21, color: C.dim }, g);
+          fade(g, tl, .3 + i * .22, .5, { scale: .6, transformOrigin: "50% 50%" });
+          return g;
+        });
+        for (let i = 0; i < xs.length - 1; i++) arrow(xs[i] + 90, y, xs[i + 1] - 94, y, "dim", tl, .6 + i * .22, .3, 2.5);
+        const br = P("M 492 345 L 492 328 L 888 328 L 888 345", { color: C.dim, sw: 2 });
+        draw(br, tl, 2, .6);
+        fade(T(690, 296, "순서는 코드로 고정 (pipeline.py)", { size: 22, color: C.dim }), tl, 2.3);
+
+        const track = P(`M ${xs[0]} ${y} L ${xs[6]} ${y}`, { color: "none" });
+        const dot = Ci(xs[0], y, 12, { fill: C.yellow });
+        fade(dot, tl, 2.7, .3);
+        const t0 = 2.9, dur = 5, span = xs[6] - xs[0];
+        along(dot, track, tl, t0, dur, "none");
+        groups.forEach((g, i) => {
+          const at = t0 + dur * ((xs[i] - xs[0]) / span);
+          tl.to(g, { scale: 1.08, transformOrigin: "50% 50%", yoyo: true, repeat: 1, duration: .2 }, Math.max(at - .2, t0));
+        });
+        tl.to(dot, { opacity: 0, duration: .3 }, t0 + dur);
+        hold(tl, 1.2);
+      } },
+
+    { name: "가짜 댓글 거르기", cap: "Agent 1은 홍보, 복붙, 내용 없는 칭찬을 먼저 걸러내요. 광고 냄새를 배우지 않으려고요. 남은 진짜 목소리로 페르소나를 뽑아요.",
+      build(tl) {
+        fade(T(700, 62, "인기 댓글", { size: 28, color: C.dim }), tl, 0);
+        draw(P("M 500 232 L 900 232 L 736 470 L 736 545 M 664 545 L 664 470 L 500 232", { color: C.blue, sw: 3 }), tl, .1, 1);
+        fade(T(1270, 200, "걸러낸 댓글", { size: 28, color: C.red }), tl, .4);
+        fade(T(560, 690, "페르소나", { size: 24, color: C.dim, anchor: "end" }), tl, .8);
+        const pc = Ci(700, 690, 72, { stroke: C.yellow, sw: 3, fill: C.yellow, fo: .07 });
+        draw(pc, tl, .8, .8);
+        const data = [["ㅠㅠ 분명 티 나는데… 안 다가옴", 0], ["상담 · 강의 문의는 링크로 ↓", 1, "업체 홍보"],
+          ["약한 재회 신호에도 또 흔들려요", 0], ["영상 너무 좋아요!", 1, "영상 내용 없는 칭찬"],
+          ["회피형 만나면 정신 나간다", 0], ["16. 서운한 점이 생겼을 때… 23.", 1, "다른 영상에도 붙는 복붙"],
+          ["5일째 연락을 안 받아요", 0]];
+        let fi = 0, ri = 0;
+        data.forEach(([s, fake, why], i) => {
+          const g = G();
+          const r = R(700, 130, 340, 50, { rx: 12, stroke: C.dim, fill: C.panel }, g);
+          T(700, 130, s, { size: 21 }, g);
+          const t0 = .9 + i * .72;
+          tl.fromTo(g, { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: .3 }, t0);
+          tl.to(g, { y: 110, duration: .4, ease: "power1.in" }, t0 + .32);
+          if (fake) {
+            const ty = 285 + fi++ * 100;
+            tl.to(r, { attr: { stroke: C.red }, duration: .2 }, t0 + .72);
+            tl.to(g, { x: 570, y: ty - 130, duration: .6, ease: "power2.out" }, t0 + .78);
+            fade(T(1270, ty + 42, why, { size: 19, color: C.red }), tl, t0 + 1.3, .4);
+          } else {
+            const k = ri++;
+            tl.to(r, { attr: { stroke: C.blue }, duration: .2 }, t0 + .72);
+            tl.to(g, { y: 430, scale: .15, opacity: 0, transformOrigin: "50% 50%", duration: .6, ease: "power2.in" }, t0 + .78);
+            const d = Ci(700, 560, 7, { fill: C.blue });
+            const tx = 700 + [-32, 28, -6, 34][k % 4], ty = 690 + [-26, -14, 24, 22][k % 4];
+            tl.fromTo(d, { opacity: 0, attr: { cx: 700, cy: 560 } }, { opacity: 1, attr: { cx: tx, cy: ty }, duration: .5 }, t0 + 1.3);
+          }
+        });
+        write(T(700, 805, "회피형 전 연인의 신호에 흔들리는 이별 후 미련형", { size: 28, color: C.yellow, weight: 600 }), tl, 6.4, 1.4);
+        hold(tl, 2);
+      } },
+
+    { name: "소구점 바꾸기", cap: "소구점을 그대로 말하면 광고가 돼요. 타깃이 지금 실제로 느끼는 결핍의 언어로 바꾸고, 그 언어는 페르소나마다 달라요.",
+      build(tl) {
+        fade(T(800, 150, "제품 소구점", { size: 26, color: C.dim }), tl, 0);
+        write(T(800, 230, "연애 사주를 잘 봐요", { size: 58, weight: 600 }), tl, .2, 1.4);
+        const ra = arrow(720, 290, 470, 390, "red", tl, 1.8, .5);
+        const rt = T(430, 440, "그대로 말하면 광고로 읽혀요", { size: 28, color: C.red });
+        fade(rt, tl, 2.2);
+        const strike = L(250, 440, 610, 440, { color: C.red, sw: 3 });
+        draw(strike, tl, 3.1, .4);
+        tl.to([ra, rt, strike], { opacity: .22, duration: .5 }, 3.7);
+        arrow(880, 290, 1130, 390, "blue", tl, 3.9, .5);
+        fade(T(1170, 440, "타깃이 실제로 느끼는 언어로", { size: 28, color: C.blue }), tl, 4.3);
+        write(T(800, 560, "곱씹느니, 정해진 인연이 언제인지라도 알고 싶다", { size: 44, color: C.yellow, weight: 600 }), tl, 4.9, 1.8);
+        const box = G();
+        R(800, 755, 1180, 150, { stroke: C.line, fill: C.panel, rx: 14 }, box);
+        T(800, 700, "페르소나마다 다리가 달라요", { size: 22, color: C.dim }, box);
+        const l1 = T(800, 748, "", { size: 24 }, box);
+        TS(l1, "읽씹당한 썸   →   ", C.dim); TS(l1, "내 탓인지 아닌지라도 알고 싶다", C.green);
+        const l2 = T(800, 792, "", { size: 24 }, box);
+        TS(l2, "회피형 재회 미련   →   ", C.dim); TS(l2, "다시 와도 똑같을지 알고 싶다", C.green);
+        fade(box, tl, 6.9, .7, { y: 16 });
+        hold(tl, 2.4);
+      } },
+
+    { name: "삶의 여정", cap: "Agent 2는 같은 고민을 쓴 실제 커뮤니티 글을 읽고 이 사람의 여정을 그린 뒤, 운명원으로 가는 다리를 찾아요.",
+      build(tl) {
+        const grid = G();
+        for (let x = 150; x <= 1450; x += 100) L(x, 120, x, 720, { color: C.grid, sw: 1 }, grid);
+        for (let y = 140; y <= 720; y += 80) L(150, y, 1450, y, { color: C.grid, sw: 1 }, grid);
+        fade(grid, tl, 0, .8);
+        draw(L(150, 720, 1460, 720, { sw: 2.5 }), tl, .2, .8);
+        draw(L(150, 720, 150, 130, { sw: 2.5 }), tl, .2, .8);
+        fade(T(1460, 758, "시간", { size: 22, color: C.dim, anchor: "end" }), tl, .6);
+        fade(T(166, 108, "마음이 흔들리는 정도", { size: 22, color: C.dim, anchor: "start" }), tl, .6);
+
+        const pts = [[160, 660], [300, 640], [420, 380], [560, 480], [700, 320], [840, 440], [1000, 280], [1140, 360], [1250, 410]];
+        const curve = P(smooth(pts), { color: C.blue, sw: 4 });
+        draw(curve, tl, .9, 3.2, "power1.inOut");
+        const keys = [[420, 380, "계기", "며칠 뒤 톡이 뚝 끊김", -1, 1.6], [700, 320, "몸부림", "회피형 글을 밤새 찾아봄", -1, 2.4],
+          [1000, 280, "지금", "스토리 조회 목록을 확인", -1, 3.3], [1250, 410, "채워지지 않은 욕구", "반복될지 확실히 알고 싶다", 1, 4.0]];
+        keys.forEach(([x, y, a, b, side, at]) => {
+          fade(Ci(x, y, 9, { fill: C.blue }), tl, at, .3, { scale: .2, transformOrigin: "50% 50%" });
+          fade(T(x, y + side * 78, a, { size: 25, color: C.blue, weight: 600 }), tl, at + .1, .5, { y: 8 * side });
+          fade(T(x, y + side * 46, b, { size: 20, color: C.ink }), tl, at + .2, .5, { y: 8 * side });
+        });
+        const bridge = P("M 1250 410 C 1330 410 1420 330 1440 222", { color: C.yellow, sw: 3.5 });
+        draw(bridge, tl, 4.8, 1.1);
+        tl.set(bridge, { attr: { "stroke-dasharray": "12 10", "stroke-dashoffset": 0 } }, 5.95);
+        const st = P(star(1440, 196, 24), { color: C.yellow, sw: 2, fill: C.yellow });
+        fade(st, tl, 5.8, .5, { scale: .2, transformOrigin: "50% 50%" });
+        write(T(1440, 140, "운명원", { size: 32, color: C.yellow, weight: 600 }), tl, 6, 1);
+        fade(T(1200, 600, "“정해진 인연이 언제인지라도 알고 싶다”", { size: 24, color: C.yellow }), tl, 6.6, .7);
+        fade(T(160, 800, "재료: 블라인드 · 여성시대에 같은 고민을 쓴 실제 글 (언론 기사는 제외)", { size: 20, color: C.dim, anchor: "start" }), tl, 7.1, .6);
+        hold(tl, 2.2);
+      } },
+
+    { name: "댓글 조립", cap: "Agent 3은 영상 속 장면, 페르소나의 처지, 운명원 넛지를 한 문장으로 엮어요. 규칙 검사를 통과해야 게시할 수 있어요.",
+      build(tl) {
+        const parts = [[190, "영상 속 장면", "새벽 2시 '보고 싶다' 후 일주일 잠수는 재회 결심이 아니라는 말", "green"],
+          [300, "페르소나의 처지", "스토리 조회 목록 끝까지 내리다가 이 영상에 들어옴", "blue"],
+          [410, "운명원 넛지 · 다짐형", "이번 주말엔 운명원 궁합이나 볼까..", "yellow"]];
+        const chips = parts.map(([y, lab, txt, c], i) => {
+          const g = G();
+          R(800, y, 1260, 84, { stroke: C[c], fill: C.panel, rx: 14 }, g);
+          T(205, y, lab, { size: 22, color: C[c], anchor: "start", weight: 600 }, g);
+          T(470, y, txt, { size: 25, anchor: "start" }, g);
+          fade(g, tl, .2 + i * .6, .6, { x: -60 });
+          return g;
+        });
+        tl.to(chips, { y: 260, opacity: 0, scale: .9, transformOrigin: "50% 50%", duration: .7, stagger: .1, ease: "power2.in" }, 3.4);
+        fade(T(800, 330, "댓글 초안", { size: 24, color: C.dim }), tl, 3.9);
+        const box = R(800, 460, 1420, 170, { stroke: C.ink, fill: C.panel, rx: 18 });
+        draw(box, tl, 3.8, .8);
+        COMMENT.forEach((line, li) => {
+          const t = T(800, 428 + li * 64, "", { size: 25 });
+          line.forEach(([s, c]) => TS(t, s, C[c]));
+          write(t, tl, 4.4 + li * 1.1, 1.5);
+        });
+        const legend = T(800, 600, "", { size: 21 });
+        TS(legend, "■ 페르소나의 처지   ", C.blue); TS(legend, "■ 영상 속 장면   ", C.green); TS(legend, "■ 운명원 넛지", C.yellow);
+        fade(legend, tl, 6.3, .5);
+        ["113자 (40~120)", "링크 없음", "해시태그 없음", "운명원 언급", "이용 후기 아님"].forEach((s, i) => {
+          const g = G();
+          const x = 800 + (i - 2) * 262;
+          R(x, 700, 240, 54, { stroke: C.green, fill: C.panel, rx: 27 }, g);
+          T(x, 700, "✓ " + s, { size: 21, color: C.green }, g);
+          fade(g, tl, 6.8 + i * .2, .4, { scale: .7, transformOrigin: "50% 50%" });
+        });
+        hold(tl, 2.4);
+      } },
+
+    { name: "게시 상태", cap: "게시는 에이전트가 아니라 정해진 코드예요. 버튼을 누른 뒤 실패하면 이미 올라갔을 수 있어서 '확인 필요'로 잠가 중복 댓글을 막아요.",
+      build(tl) {
+        const y = 400;
+        const st = [[200, "여는 중"], [480, "입력 중"], [920, "확인 중"], [1250, "성공"]];
+        const boxes = st.map(([x, s], i) => {
+          const g = G();
+          const r = R(x, y, 200, 84, { stroke: C.dim, fill: C.panel, rx: 42 }, g);
+          T(x, y, s, { size: 27 }, g);
+          fade(g, tl, .1 + i * .15, .5, { scale: .7, transformOrigin: "50% 50%" });
+          return r;
+        });
+        const btn = L(700, 250, 700, 540, { color: C.yellow, sw: 3 });
+        draw(btn, tl, .6, .6);
+        tl.set(btn, { attr: { "stroke-dasharray": "10 9", "stroke-dashoffset": 0 } }, 1.2);
+        fade(T(700, 218, "게시 버튼 클릭", { size: 24, color: C.yellow, weight: 600 }), tl, .9);
+        fade(T(1080, 150, "이 선을 넘으면 이미 올라갔을 수 있어요", { size: 24, color: C.yellow }), tl, 1.1);
+
+        const typed = "스토리 조회 목록 끝까지 내리다가…";
+        R(480, 282, 360, 56, { stroke: C.line, fill: C.panel, rx: 10 });
+        const tt = T(318, 282, "", { size: 21, anchor: "start" });
+        const track = P(`M 80 ${y} L 1250 ${y}`, { color: "none" });
+        const dot = Ci(80, y, 13, { fill: C.yellow });
+        const len = track.getTotalLength(), f = x => (x - 80) / len;
+        fade(dot, tl, 1.2, .3);
+        along(dot, track, tl, 1.4, .6, "power2.out", 0, f(200));
+        tl.to(boxes[0], { attr: { stroke: C.blue }, duration: .3 }, 2);
+        along(dot, track, tl, 2.3, .6, "power2.inOut", f(200), f(480));
+        tl.to(boxes[1], { attr: { stroke: C.blue }, duration: .3 }, 2.9);
+        const c = { n: 0 };
+        tl.to(c, { n: typed.length, duration: 1.8, ease: "none", onUpdate() { tt.textContent = typed.slice(0, Math.round(c.n)); } }, 3);
+        along(dot, track, tl, 5, .9, "power2.inOut", f(480), f(920));
+        tl.to(btn, { attr: { "stroke-width": 6 }, yoyo: true, repeat: 1, duration: .15 }, 5.35);
+        tl.to(boxes[2], { attr: { stroke: C.blue }, duration: .3 }, 5.9);
+        along(dot, track, tl, 6.4, .7, "power2.inOut", f(920), 1);
+        tl.to(boxes[3], { attr: { stroke: C.green, fill: C.green, "fill-opacity": .18 }, duration: .4 }, 7.1);
+        tl.to(dot, { opacity: 0, scale: 2.2, transformOrigin: "50% 50%", duration: .4 }, 7.1);
+        fade(T(1250, 482, "댓글 직링크 · 캡처 저장", { size: 21, color: C.green }), tl, 7.3);
+
+        curveArrow(`M 200 445 Q 210 560 290 610`, "red", tl, 8, .5, 2.5);
+        curveArrow(`M 480 445 Q 470 560 390 610`, "red", tl, 8.1, .5, 2.5);
+        const fb = G();
+        R(340, 655, 330, 76, { stroke: C.red, fill: C.panel, rx: 14 }, fb);
+        T(340, 655, "실패 → 다시 시도 가능", { size: 24, color: C.red }, fb);
+        T(340, 718, "사유와 화면 캡처를 남겨요", { size: 20, color: C.dim }, fb);
+        fade(fb, tl, 8.5, .5, { y: 12 });
+        arrow(920, 445, 920, 608, "yellow", tl, 9, .5, 2.5);
+        const ub = G();
+        R(920, 655, 400, 76, { stroke: C.yellow, fill: C.panel, rx: 14 }, ub);
+        T(920, 655, "확인 필요 → 영상 잠금", { size: 24, color: C.yellow }, ub);
+        T(920, 718, "사람이 확인할 때까지 중복 게시를 막아요", { size: 20, color: C.dim }, ub);
+        fade(ub, tl, 9.4, .5, { y: 12 });
+        hold(tl, 2.6);
+      } },
+
+    { name: "울타리", cap: "허용 채널, 영상당 1개, 하루 상한, 이용 후기 금지는 화면이 아니라 서버에서 강제해요.",
+      build(tl) {
+        const fence = R(720, 450, 1000, 500, { stroke: C.green, rx: 36, sw: 3 });
+        draw(fence, tl, 0, 1.2);
+        tl.set(fence, { attr: { "stroke-dasharray": "16 11", "stroke-dashoffset": 0 } }, 1.2);
+        fade(T(260, 240, "허용 범위", { size: 26, color: C.green, anchor: "start", weight: 600 }), tl, .6);
+        const names = ["외롭여", "리즈시절 LizTV", "러브커넥트 유지연", "연애데이터 노노", "심리조각", "본인 테스트 영상"];
+        const chips = names.map((s, i) => {
+          const x = 450 + (i % 3) * 270, y = 380 + Math.floor(i / 3) * 130;
+          const g = G();
+          const r = R(x, y, 240, 64, { stroke: C.line, fill: C.panel, rx: 12 }, g);
+          T(x, y, s, { size: 22 }, g);
+          fade(g, tl, .8 + i * .12, .4, { scale: .7, transformOrigin: "50% 50%" });
+          return r;
+        });
+        const out = G();
+        Ci(1530, 450, 17, { fill: C.red }, out);
+        T(1530, 500, "허용 밖 링크", { size: 20, color: C.red }, out);
+        fade(out, tl, 2, .4);
+        tl.to(out, { x: -290, duration: .7, ease: "power2.in" }, 2.6);
+        tl.to(out, { x: -50, duration: .7, ease: "power2.out" }, 3.3);
+        tl.to(fence, { attr: { "stroke-width": 7 }, yoyo: true, repeat: 1, duration: .14 }, 3.25);
+        write(T(1340, 380, "403", { size: 40, color: C.red, weight: 600 }), tl, 3.3, .8);
+        tl.to(chips[2], { attr: { stroke: C.green }, duration: .3 }, 4.3);
+        fade(T(720, 425, "게시함 · 다시 못 달아요", { size: 18, color: C.green }), tl, 4.4, .4);
+        const cnt = T(720, 765, "오늘 0 / 10 게시", { size: 30 });
+        fade(cnt, tl, 4.8, .4);
+        const c = { n: 0 };
+        tl.to(c, { n: 2, duration: .8, ease: "none", onUpdate() { cnt.textContent = `오늘 ${Math.round(c.n)} / 10 게시`; } }, 5.2);
+        fade(T(720, 815, "이용 후기처럼 쓴 문장은 사람이 고쳐 넣어도 서버에서 막혀요", { size: 21, color: C.dim }), tl, 6, .5);
+        hold(tl, 2.4);
+      } },
+
+    { name: "정리", cap: "실제 작동 시연 영상과 코드는 GitHub 저장소에서 볼 수 있어요.",
+      build(tl) {
+        write(T(800, 230, "정리", { size: 60, weight: 600 }), tl, 0, 1.2);
+        [["①", "지정 채널 5개 영상 · 링크는 채널 확인 후 허용", C.dim],
+          ["②", "에이전트 3개: 가짜 댓글 거르기 → 삶의 여정 → 장면을 짚은 댓글", C.blue],
+          ["③", "Playwright로 한 글자씩 게시 → 목록에서 확인 · 직링크 저장", C.green],
+          ["·", "운영 규칙은 서버에서 강제, 사람은 근거를 보고 승인", C.yellow]].forEach(([n, s, c], i) => {
+          const t = T(800, 350 + i * 72, "", { size: 30 });
+          TS(t, n + "  ", c); TS(t, s, C.ink);
+          fade(t, tl, .9 + i * .35, .6, { y: 14 });
+        });
+        fade(T(800, 690, "github.com/Haikoo96/unmyeongwon-comment-agent", { size: 26, color: C.blue }), tl, 2.6, .6);
+        hold(tl, 3);
+      } },
+  ];
+
+  // ---------- 재생 ----------
+  const cap = document.getElementById("cap"), bar = document.getElementById("bar"), playBtn = document.getElementById("play");
+  const chapters = document.getElementById("chapters");
+  scenes.forEach((s, i) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = `<b>${i + 1}</b>`;
+    b.append(s.name);
+    b.addEventListener("click", () => go(i));
+    li.append(b);
+    chapters.append(li);
+  });
+
+  let cur = -1, tl = null, playing = !REDUCE, advanceTimer = null;
+
+  function syncUI() {
+    playBtn.textContent = playing ? "일시정지" : "재생";
+    chapters.querySelectorAll("button").forEach((b, i) => i === cur ? b.setAttribute("aria-current", "step") : b.removeAttribute("aria-current"));
+  }
+  function progress() { bar.style.width = ((cur + (tl ? tl.progress() : 0)) / scenes.length * 100) + "%"; }
+
+  function go(i) {
+    if (i < 0 || i >= scenes.length) return;
+    clearTimeout(advanceTimer);
+    if (tl) tl.kill();
+    const old = layer;
+    if (old) gsap.to(old, { opacity: 0, duration: .3, onComplete: () => old.remove() });
+    cur = i;
+    layer = E("g", {}, svg);
+    tl = gsap.timeline({ paused: true, delay: old ? .3 : 0, onUpdate: progress, onComplete: done });
+    scenes[i].build(tl);
+    cap.style.opacity = 0;
+    setTimeout(() => { cap.textContent = scenes[i].cap; cap.style.opacity = 1; }, old ? 250 : 0);
+    syncUI();
+    if (REDUCE) { tl.progress(1); progress(); } else tl.play();
+  }
+  function done() {
+    progress();
+    if (cur === scenes.length - 1) { window.__explainerDone = true; if (!RECORD) { playing = false; syncUI(); } return; }
+    if (playing) advanceTimer = setTimeout(() => go(cur + 1), 700);
+  }
+  function togglePlay() {
+    playing = !playing;
+    if (playing) { if (tl && tl.progress() === 1) go(cur + 1 < scenes.length ? cur + 1 : 0); else if (tl) tl.play(); }
+    else { clearTimeout(advanceTimer); if (tl) tl.pause(); }
+    syncUI();
+  }
+  playBtn.addEventListener("click", togglePlay);
+  document.getElementById("next").addEventListener("click", () => go(Math.min(cur + 1, scenes.length - 1)));
+  document.getElementById("prev").addEventListener("click", () => go(Math.max(cur - 1, 0)));
+  document.getElementById("restart").addEventListener("click", () => { playing = !REDUCE; go(0); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "ArrowRight") go(Math.min(cur + 1, scenes.length - 1));
+    else if (e.key === "ArrowLeft") go(Math.max(cur - 1, 0));
+    else if (e.key === " " && e.target === document.body) { e.preventDefault(); togglePlay(); }
+  });
+
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(() => go(0));
+})();
+</script>

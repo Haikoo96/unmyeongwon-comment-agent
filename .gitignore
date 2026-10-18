@@ -1,0 +1,13 @@
+# 비밀 값 (필요한 값은 README 설치 항목 참고)
+.env
+.env.*
+
+# DB, 크롬 프로필(구글 로그인 쿠키), 캡처
+data/
+
+# 로컬 도구 설정
+.claude/
+
+__pycache__/
+*.pyc
+.venv/

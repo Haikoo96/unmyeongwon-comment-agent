@@ -1,0 +1,98 @@
+:root{
+  --bg:#f5f4f8; --surface:#fff; --fg:#1d1f33; --muted:#5d6078; --line:#dcdae6;
+  --accent:#a3345c; --accent-soft:#f6e6ec; --ok:#1f6f6a; --ok-soft:#e2f1ef; --bad:#b3261e; --bad-soft:#fbe7e5;
+  --warn:#8a5a00; --warn-soft:#fbf1d9;
+  --body:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif; --mono:"IBM Plex Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 var(--body);padding:0 20px 40px}
+h1{font-size:18px;margin:0}
+h2{font-size:15px;margin:0}
+.top{display:flex;justify-content:space-between;align-items:center;padding:16px 0;gap:12px;flex-wrap:wrap}
+.meta{display:flex;gap:8px}
+.pill{font:12px var(--mono);padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.pill.fence{color:var(--ok);border-color:var(--ok)}
+.pill.full{color:var(--bad);border-color:var(--bad)}
+
+.cols{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.6fr) minmax(240px,1fr);gap:14px;align-items:start}
+@media (max-width:1000px){.cols{grid-template-columns:1fr}}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.col.locked{opacity:.45;pointer-events:none}
+.col-head{display:flex;gap:8px;align-items:center}
+.step{font:500 13px var(--mono);color:var(--accent)}
+
+button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input,textarea,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--fg);width:100%}
+textarea{resize:vertical}
+.link{display:flex;gap:6px}
+.link button{flex:none}
+.msg{margin:0;font-size:13px;color:var(--muted)}
+.msg.err{color:var(--bad)}
+.sub{font-size:12px;color:var(--muted)}
+.label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.02em}
+.empty{color:var(--muted);padding:30px 0;text-align:center}
+
+.videos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:62vh;overflow:auto}
+.videos li{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:6px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.videos li:hover{background:var(--bg)}
+.videos li.sel{border-color:var(--accent);background:var(--accent-soft)}
+.videos li.done{opacity:.55}
+.videos img{width:96px;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:var(--line)}
+.videos .t{font-size:13px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tag{font:11px var(--mono);color:var(--ok)}
+
+.vhead{display:grid;grid-template-columns:140px 1fr;gap:12px}
+.vhead img{width:140px;aspect-ratio:16/9;object-fit:cover;border-radius:8px}
+.vhead a{font-size:12px;color:var(--accent)}
+.block{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.worry{font-size:16px;font-weight:600;margin:0}
+details summary{cursor:pointer}
+.journey{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.journey div{display:grid;grid-template-columns:110px 1fr;gap:8px;font-size:13px}
+.journey div span:first-child{color:var(--muted);font:12px var(--mono)}
+.journey .bridge span{color:var(--accent);font-weight:600}
+.evidence{margin:0;padding-left:18px;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.evidence.muted{color:var(--muted)}
+.checks{display:flex;flex-wrap:wrap;gap:6px}
+.chk{font:12px var(--mono);padding:2px 8px;border-radius:6px;background:var(--ok-soft);color:var(--ok)}
+.chk.no{background:var(--bad-soft);color:var(--bad)}
+#reBtn{align-self:flex-start}
+
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.progress{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.progress li{padding-left:22px;position:relative;color:var(--muted)}
+.progress li::before{content:"";position:absolute;left:2px;top:6px;width:10px;height:10px;border-radius:50%;border:2px solid var(--line)}
+.progress li.on{color:var(--fg);font-weight:600}
+.progress li.on::before{border-color:var(--accent);background:var(--accent)}
+.progress li.cur::before{animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.progress li.cur::before{animation:none}}
+.progress a{color:inherit}
+.fail,.warn{border-radius:8px;padding:10px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.fail{background:var(--bad-soft);color:var(--bad)}
+.warn{background:var(--warn-soft);color:var(--warn)}
+.fail img,.warn img{max-width:100%;border-radius:6px}
+.progress li.bad{color:var(--bad);font-weight:600}
+.progress li.bad::before{border-color:var(--bad);background:var(--bad)}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+button.ghost{border-color:transparent;color:var(--muted)}
+.badge{font:11px var(--mono);padding:1px 7px;border-radius:999px;margin-left:4px;background:var(--ok-soft);color:var(--ok);font-weight:500}
+.badge.low{background:var(--warn-soft);color:var(--warn)}
+.badge:empty{display:none}
+.st.unverified{color:var(--warn)}
+.resolve{display:flex;gap:4px;margin-top:4px}
+.resolve button{padding:2px 8px;font-size:12px}
+
+.log{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.tablebox{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 12px var(--mono);color:var(--muted)}
+td.time{font:12px var(--mono);white-space:nowrap;color:var(--muted)}
+.st{font:12px var(--mono)}
+.st.posted{color:var(--ok)}.st.failed{color:var(--bad)}
